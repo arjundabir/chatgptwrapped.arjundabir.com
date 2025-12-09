@@ -1,5 +1,13 @@
 const YEAR_2025_START = Math.floor(new Date(2025, 0, 1).getTime() / 1000);
 
+// Helper function to format a date as YYYY-MM-DD in local time
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 interface MappingNode {
   id?: string;
   message?: {
@@ -40,6 +48,13 @@ export interface FirstConversationData {
   firstUserMessage?: string;
   firstAssistantMessage?: string;
   conversationId?: string;
+}
+
+export interface DaysActiveData {
+  totalDays: number;
+  longestStreak: number;
+  activeDaysInYear: number;
+  contributions: Array<{ date: string; count: number; level: number }>;
 }
 
 // Helper function to extract conversation ID and first messages from mapping
@@ -249,6 +264,142 @@ export async function parseFirstConversationFromFiles(
     };
   } catch (error) {
     console.error("Error parsing conversations from files:", error);
+    return null;
+  }
+}
+
+/**
+ * Parse conversations from FileList and calculate days active statistics
+ */
+export async function parseDaysActiveFromFiles(
+  files: FileList
+): Promise<DaysActiveData | null> {
+  try {
+    // Find conversations.json in the file list
+    let conversationsFile: File | null = null;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Check if it's conversations.json (could be at root or in a subdirectory)
+      if (file.name === "conversations.json" || file.name.endsWith("/conversations.json")) {
+        conversationsFile = file;
+        break;
+      }
+    }
+
+    if (!conversationsFile) {
+      return null;
+    }
+
+    const text = await conversationsFile.text();
+    const conversations: Conversation[] = JSON.parse(text);
+
+    // Filter conversations for 2025
+    const conversations2025 = conversations.filter(
+      (conv) => conv.create_time >= YEAR_2025_START
+    );
+
+    if (conversations2025.length === 0) {
+      return null;
+    }
+
+    // Map to count conversations per day
+    const dayCounts = new Map<string, number>();
+    
+    conversations2025.forEach((conv) => {
+      const date = new Date(conv.create_time * 1000);
+      // Normalize to local time and format as YYYY-MM-DD
+      const dateStr = formatLocalDate(date);
+      dayCounts.set(dateStr, (dayCounts.get(dateStr) || 0) + 1);
+    });
+
+    // Calculate total unique days
+    const totalDays = dayCounts.size;
+
+    // Calculate longest streak of consecutive days
+    const sortedDates = Array.from(dayCounts.keys()).sort();
+    let longestStreak = 0;
+    let currentStreak = 0;
+    let previousDate: Date | null = null;
+
+    sortedDates.forEach((dateStr) => {
+      // Parse date string as local time (YYYY-MM-DD format)
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const currentDate = new Date(year, month - 1, day);
+      
+      if (previousDate === null) {
+        currentStreak = 1;
+      } else {
+        const diffDays = Math.floor(
+          (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        if (diffDays === 1) {
+          // Consecutive day
+          currentStreak += 1;
+        } else {
+          // Gap found, reset streak
+          longestStreak = Math.max(longestStreak, currentStreak);
+          currentStreak = 1;
+        }
+      }
+      
+      previousDate = currentDate;
+    });
+    
+    // Check final streak
+    longestStreak = Math.max(longestStreak, currentStreak);
+
+    // Build contributions array with all days in 2025 (using local time)
+    const yearStart = new Date(2025, 0, 1); // January 1, 2025 in local time
+    const yearEnd = new Date(2025, 11, 31); // December 31, 2025 in local time
+    const allDays: Array<{ date: string; count: number }> = [];
+    
+    const currentDate = new Date(yearStart);
+    while (currentDate <= yearEnd) {
+      const dateStr = formatLocalDate(currentDate);
+      allDays.push({
+        date: dateStr,
+        count: dayCounts.get(dateStr) || 0,
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate max count for level calculation
+    const maxCount = Math.max(...Array.from(dayCounts.values()), 1);
+
+    // Build contributions with levels
+    const contributions = allDays.map(({ date, count }) => {
+      // Calculate level based on count (0-4)
+      let level = 0;
+      if (count > 0) {
+        if (maxCount === 1) {
+          level = 1;
+        } else {
+          // Distribute levels based on count relative to max
+          const ratio = count / maxCount;
+          if (ratio >= 0.8) level = 4;
+          else if (ratio >= 0.6) level = 3;
+          else if (ratio >= 0.4) level = 2;
+          else level = 1;
+        }
+      }
+      
+      return {
+        date,
+        count,
+        level,
+      };
+    });
+
+    return {
+      totalDays,
+      longestStreak,
+      activeDaysInYear: totalDays, // Same as totalDays for 2025
+      contributions,
+    };
+  } catch (error) {
+    console.error("Error parsing days active from files:", error);
     return null;
   }
 }

@@ -15,9 +15,12 @@ import {
 import { useRef, useState, useEffect } from 'react';
 import {
   parseFirstConversationFromFiles,
+  parseDaysActiveFromFiles,
   type FirstConversationData,
+  type DaysActiveData,
 } from '@/lib/parseConversations';
 import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
+import { DaysActiveSlide } from '@/components/slides/DaysActiveSlide';
 import { motion } from 'motion/react';
 
 export default function Ai01() {
@@ -30,6 +33,9 @@ export default function Ai01() {
   const [wrappedData, setWrappedData] = useState<FirstConversationData | null>(
     null
   );
+  const [daysActiveData, setDaysActiveData] = useState<DaysActiveData | null>(
+    null
+  );
   const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -39,6 +45,7 @@ export default function Ai01() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const handleDragEnter = (e: DragEvent) => {
@@ -90,9 +97,9 @@ export default function Ai01() {
     };
   }, []);
 
-  // Scroll to bottom when chat messages or wrapped content appears
+  // Scroll to bottom when chat messages or processing appears
   useEffect(() => {
-    if (showChatMessages || showProcessing || isWrappedMode) {
+    if (showChatMessages || showProcessing) {
       setTimeout(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({
@@ -102,7 +109,35 @@ export default function Ai01() {
         }
       }, 100);
     }
-  }, [showChatMessages, showProcessing, isWrappedMode]);
+  }, [showChatMessages, showProcessing]);
+
+  // Calculate max slide based on available data
+  const getMaxSlide = () => {
+    let maxSlide = -1;
+    if (wrappedData) maxSlide = 0; // Slide 0: First Conversation
+    if (daysActiveData) maxSlide = 1; // Slide 1: Days Active
+    // Add more slides here as they're implemented
+    // if (someOtherData) maxSlide = 2;
+    // if (anotherData) maxSlide = 3;
+    // ... up to slide 7 (8 total slides)
+    return maxSlide;
+  };
+
+  // Scroll to current slide when it changes
+  useEffect(() => {
+    if (isWrappedMode && currentSlide >= 0) {
+      const slideElement = slideRefs.current[currentSlide];
+      if (slideElement) {
+        // Wait for the slide to render, then scroll smoothly
+        setTimeout(() => {
+          slideElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }, 100);
+      }
+    }
+  }, [currentSlide, isWrappedMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,14 +164,18 @@ export default function Ai01() {
 
       // Parse conversations
       const firstConv = await parseFirstConversationFromFiles(uploadedFiles);
+      const daysActive = await parseDaysActiveFromFiles(uploadedFiles);
 
       if (firstConv) {
         setWrappedData(firstConv);
+        if (daysActive) {
+          setDaysActiveData(daysActive);
+        }
 
         // Show wrapped mode after processing
         setTimeout(() => {
           setIsWrappedMode(true);
-          setCurrentSlide(0);
+          setCurrentSlide(0); // Start at first slide
           setIsSubmitting(false);
         }, 1500);
       }
@@ -193,14 +232,15 @@ export default function Ai01() {
         ref={scrollContainerRef}
         className="flex-1 overflow-auto px-4 pb-4 relative"
       >
-        <div className="max-w-2xl w-full mx-auto pt-16">
+        <div className="max-w-3xl w-full mx-auto pt-16">
           {/* Instructions - always visible */}
           <>
             <h1 className="text-2xl font-bold tracking-normal leading-normal text-foreground mb-1">
               ChatGPT Wrapped
             </h1>
             <p className="text-[16px] text-foreground leading-relaxed">
-              To generate your ChatGPT Wrapped, follow the instructions below.
+              To download your data to generate your ChatGPT Wrapped, follow the
+              instructions below.
             </p>
             <div className="mt-2 rounded-lg overflow-hidden border border-border">
               <img
@@ -258,16 +298,37 @@ export default function Ai01() {
 
           {/* Wrapped mode content - appears below chat messages */}
           {isWrappedMode && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mt-8"
-            >
-              {currentSlide === 0 && wrappedData && (
-                <FirstConversationSlide data={wrappedData} />
+            <>
+              {/* Slide 0: First Conversation */}
+              {wrappedData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[0] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mt-8"
+                >
+                  <FirstConversationSlide data={wrappedData} />
+                </motion.div>
               )}
-            </motion.div>
+              {/* Slide 1: Days Active */}
+              {daysActiveData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[1] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="mt-8"
+                >
+                  <DaysActiveSlide data={daysActiveData} />
+                </motion.div>
+              )}
+              {/* Future slides will go here (slide 2, 3, 4, etc.) */}
+            </>
           )}
         </div>
       </div>
@@ -279,6 +340,24 @@ export default function Ai01() {
               type="button"
               size="icon"
               className="size-10 rounded-full bg-white hover:bg-gray-100 border border-border shadow"
+              onClick={() => {
+                const maxSlide = getMaxSlide();
+
+                if (currentSlide < maxSlide) {
+                  // Move to next slide
+                  setCurrentSlide(currentSlide + 1);
+                } else {
+                  // If on last slide, scroll to bottom
+                  setTimeout(() => {
+                    if (scrollContainerRef.current) {
+                      scrollContainerRef.current.scrollTo({
+                        top: scrollContainerRef.current.scrollHeight,
+                        behavior: 'smooth',
+                      });
+                    }
+                  }, 50);
+                }
+              }}
             >
               <IconArrowDown className="size-5 text-foreground" />
             </Button>
@@ -310,7 +389,7 @@ export default function Ai01() {
               <div
                 onClick={handleInputClick}
                 className={cn(
-                  'w-full max-w-2xl mx-auto bg-transparent dark:bg-muted/50 cursor-pointer overflow-clip bg-clip-padding p-2.5 shadow-lg border border-border transition-all duration-200',
+                  'w-full max-w-3xl mx-auto bg-transparent dark:bg-muted/50 cursor-pointer overflow-clip bg-clip-padding p-2.5 shadow-lg border border-border transition-all duration-200',
                   {
                     'rounded-3xl grid grid-cols-1 grid-rows-[auto_1fr_auto]':
                       isExpanded,
@@ -440,7 +519,7 @@ export default function Ai01() {
             </form>
 
             {/* Caption with GitHub link under input */}
-            <p className="text-center text-sm text-muted-foreground mt-3 max-w-2xl mx-auto">
+            <p className="text-center text-sm text-muted-foreground mt-3 max-w-3xl mx-auto">
               <a
                 href="https://github.com/arjundabir/chatgptwrapped"
                 target="_blank"

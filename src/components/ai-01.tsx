@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import type React from "react";
+import type React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dropdown-menu';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import {
   IconMicrophone,
   IconPaperclip,
@@ -20,11 +20,11 @@ import {
   IconSend,
   IconSparkles,
   IconWaveSine,
-} from "@tabler/icons-react";
-import { useRef, useState } from "react";
+} from '@tabler/icons-react';
+import { useRef, useState } from 'react';
 
 export default function Ai01() {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,11 +33,11 @@ export default function Ai01() {
     e.preventDefault();
 
     if (message.trim()) {
-      setMessage("");
+      setMessage('');
       setIsExpanded(false);
 
       if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = 'auto';
       }
     }
   };
@@ -46,15 +46,15 @@ export default function Ai01() {
     setMessage(e.target.value);
 
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
 
-    setIsExpanded(e.target.value.length > 100 || e.target.value.includes("\n"));
+    setIsExpanded(e.target.value.length > 100 || e.target.value.includes('\n'));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as any);
     }
@@ -73,11 +73,11 @@ export default function Ai01() {
 
         <div
           className={cn(
-            "w-full max-w-2xl mx-auto bg-transparent dark:bg-muted/50 cursor-text overflow-clip bg-clip-padding p-2.5 shadow-lg border border-border transition-all duration-200",
+            'w-full max-w-2xl mx-auto bg-transparent dark:bg-muted/50 cursor-text overflow-clip bg-clip-padding p-2.5 shadow-lg border border-border transition-all duration-200',
             {
-              "rounded-3xl grid grid-cols-1 grid-rows-[auto_1fr_auto]":
+              'rounded-3xl grid grid-cols-1 grid-rows-[auto_1fr_auto]':
                 isExpanded,
-              "rounded-[28px] grid grid-cols-[auto_1fr_auto] grid-rows-[auto_1fr_auto]":
+              'rounded-[28px] grid grid-cols-[auto_1fr_auto] grid-rows-[auto_1fr_auto]':
                 !isExpanded,
             }
           )}
@@ -89,13 +89,13 @@ export default function Ai01() {
         >
           <div
             className={cn(
-              "flex min-h-14 items-center overflow-x-hidden px-1.5",
+              'flex min-h-14 items-center overflow-x-hidden px-1.5',
               {
-                "px-2 py-1 mb-0": isExpanded,
-                "-my-2.5": !isExpanded,
+                'px-2 py-1 mb-0': isExpanded,
+                '-my-2.5': !isExpanded,
               }
             )}
-            style={{ gridArea: "primary" }}
+            style={{ gridArea: 'primary' }}
           >
             <div className="flex-1 overflow-auto max-h-52">
               <Textarea
@@ -112,8 +112,8 @@ export default function Ai01() {
           </div>
 
           <div
-            className={cn("flex", { hidden: isExpanded })}
-            style={{ gridArea: "leading" }}
+            className={cn('flex', { hidden: isExpanded })}
+            style={{ gridArea: 'leading' }}
           >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -162,7 +162,7 @@ export default function Ai01() {
 
           <div
             className="flex items-center gap-2"
-            style={{ gridArea: isExpanded ? "footer" : "trailing" }}
+            style={{ gridArea: isExpanded ? 'footer' : 'trailing' }}
           >
             <div className="ms-auto flex items-center gap-1.5">
               <Button
