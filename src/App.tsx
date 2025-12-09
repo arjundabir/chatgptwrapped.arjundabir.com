@@ -1,0 +1,458 @@
+import { Textarea } from '@/components/ui/textarea';
+
+import type React from 'react';
+
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import {
+  IconSend,
+  IconMicrophone,
+  IconPlus,
+  IconArrowUp,
+  IconArrowDown,
+  IconFolder,
+} from '@tabler/icons-react';
+import { useRef, useState, useEffect } from 'react';
+import {
+  parseFirstConversationFromFiles,
+  type FirstConversationData,
+} from '@/lib/parseConversations';
+import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
+import { motion } from 'motion/react';
+
+export default function Ai01() {
+  const [message, setMessage] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isWrappedMode, setIsWrappedMode] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [wrappedData, setWrappedData] = useState<FirstConversationData | null>(
+    null
+  );
+  const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
+  const [showChatMessages, setShowChatMessages] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current++;
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setIsDragging(true);
+      }
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current--;
+      if (dragCounterRef.current === 0) {
+        setIsDragging(false);
+      }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      dragCounterRef.current = 0;
+
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        setUploadedFiles(files);
+        setSelectedFolder('ChatGPT Data');
+      }
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, []);
+
+  // Scroll to bottom when chat messages or wrapped content appears
+  useEffect(() => {
+    if (showChatMessages || showProcessing || isWrappedMode) {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({
+            top: scrollContainerRef.current.scrollHeight,
+            behavior: 'smooth',
+          });
+        }
+      }, 100);
+    }
+  }, [showChatMessages, showProcessing, isWrappedMode]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (message.trim()) {
+      setMessage('');
+      setIsExpanded(false);
+
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    }
+
+    if (selectedFolder && uploadedFiles && !isWrappedMode) {
+      setIsSubmitting(true);
+
+      // Show user message with folder
+      setShowChatMessages(true);
+
+      // After a short delay, show processing message
+      setTimeout(() => {
+        setShowProcessing(true);
+      }, 500);
+
+      // Parse conversations
+      const firstConv = await parseFirstConversationFromFiles(uploadedFiles);
+
+      if (firstConv) {
+        setWrappedData(firstConv);
+
+        // Show wrapped mode after processing
+        setTimeout(() => {
+          setIsWrappedMode(true);
+          setCurrentSlide(0);
+          setIsSubmitting(false);
+        }, 1500);
+      }
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+
+    setIsExpanded(e.target.value.length > 100 || e.target.value.includes('\n'));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  };
+
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Get the folder name from the first file's path
+      const path = files[0].webkitRelativePath;
+      const folderName = path.split('/')[0];
+      setSelectedFolder(folderName);
+      setUploadedFiles(files);
+    }
+  };
+
+  const handleInputClick = () => {
+    folderInputRef.current?.click();
+  };
+
+  return (
+    <div className="w-full h-screen flex flex-col relative overflow-hidden bg-background">
+      {isDragging && (
+        <div className="fixed inset-0 z-50 bg-white/20 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <IconFolder className="size-16 text-[#3B82F6]" />
+            <p className="text-xl font-medium text-foreground">
+              Upload your ChatGPT folder
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto px-4 pb-4 relative"
+      >
+        <div className="max-w-2xl w-full mx-auto pt-16">
+          {/* Instructions - always visible */}
+          <>
+            <h1 className="text-2xl font-bold tracking-normal leading-normal text-foreground mb-1">
+              ChatGPT Wrapped
+            </h1>
+            <p className="text-[16px] text-foreground leading-relaxed">
+              To generate your ChatGPT Wrapped, follow the instructions below.
+            </p>
+            <div className="mt-2 rounded-lg overflow-hidden border border-border">
+              <img
+                src="/chatgpt-data-tutorial.gif"
+                alt="Tutorial showing how to export ChatGPT data"
+                className="w-full h-auto"
+              />
+            </div>
+            <div className="mt-2">
+              <p className="text-[16px] text-foreground leading-relaxed mb-1">
+                Once you've downloaded your data:
+              </p>
+              <ul className="list-disc list-inside text-[16px] text-foreground leading-relaxed space-y-1">
+                <li>Unzip the file</li>
+                <li>
+                  Drag the exported folder anywhere on this screen to begin...
+                </li>
+              </ul>
+            </div>
+          </>
+
+          {/* Chat messages - appear below instructions */}
+          {showChatMessages && (
+            <div className="mt-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="flex justify-end mb-4"
+              >
+                <div className="flex items-center gap-2 px-4 py-3 bg-muted rounded-2xl max-w-[80%]">
+                  <IconFolder className="size-5 text-[#3B82F6] shrink-0" />
+                  <span className="text-sm text-foreground">
+                    {selectedFolder}
+                  </span>
+                </div>
+              </motion.div>
+
+              {showProcessing && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+                  className="flex justify-start mb-4"
+                >
+                  <div className="px-4 py-3 bg-muted rounded-2xl max-w-[80%]">
+                    <span className="text-sm text-foreground">
+                      Processing ChatGPT segments...
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+
+          {/* Wrapped mode content - appears below chat messages */}
+          {isWrappedMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-8"
+            >
+              {currentSlide === 0 && wrappedData && (
+                <FirstConversationSlide data={wrappedData} />
+              )}
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      <div className="w-full px-4 pt-4 border-border/50 bg-transparent border-t-0 opacity-100 pb-4">
+        {isWrappedMode ? (
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              size="icon"
+              className="size-10 rounded-full bg-white hover:bg-gray-100 border border-border shadow"
+            >
+              <IconArrowDown className="size-5 text-foreground" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <form
+              onSubmit={handleSubmit}
+              className="group/composer w-full bg-transparent"
+            >
+              <input
+                ref={folderInputRef}
+                type="file"
+                // @ts-expect-error - webkitdirectory is a non-standard attribute
+                webkitdirectory=""
+                directory=""
+                className="sr-only"
+                onChange={handleFolderSelect}
+              />
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={() => {}}
+              />
+
+              <div
+                onClick={handleInputClick}
+                className={cn(
+                  'w-full max-w-2xl mx-auto bg-transparent dark:bg-muted/50 cursor-pointer overflow-clip bg-clip-padding p-2.5 shadow-lg border border-border transition-all duration-200',
+                  {
+                    'rounded-3xl grid grid-cols-1 grid-rows-[auto_1fr_auto]':
+                      isExpanded,
+                    'rounded-[28px] grid grid-cols-[auto_1fr_auto] grid-rows-[auto_1fr_auto]':
+                      !isExpanded,
+                  }
+                )}
+                style={{
+                  gridTemplateAreas: isExpanded
+                    ? "'header' 'primary' 'footer'"
+                    : "'header header header' 'leading primary trailing' '. footer .'",
+                }}
+              >
+                {selectedFolder && (
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 mb-2 bg-muted/50 rounded-xl"
+                    style={{ gridArea: 'header' }}
+                  >
+                    <IconFolder className="size-5 text-[#3B82F6]" />
+                    <span className="text-sm text-foreground truncate">
+                      {selectedFolder}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFolder(null);
+                      }}
+                      className="ml-auto text-muted-foreground hover:text-foreground"
+                    >
+                      <IconPlus className="size-4 rotate-45" />
+                    </button>
+                  </div>
+                )}
+
+                <div
+                  className={cn(
+                    'flex min-h-14 items-center overflow-x-hidden px-1.5',
+                    {
+                      'px-2 py-1 mb-0': isExpanded,
+                      '-my-2.5': !isExpanded,
+                    }
+                  )}
+                  style={{ gridArea: 'primary' }}
+                >
+                  <div className="flex-1 overflow-auto max-h-52">
+                    <Textarea
+                      onFocus={(e) => e.currentTarget.blur()}
+                      ref={textareaRef}
+                      value={message}
+                      onChange={handleTextareaChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        selectedFolder
+                          ? 'Now click submit'
+                          : 'Upload ChatGPT Data here...'
+                      }
+                      className="min-h-0 resize-none rounded-none border-0 p-0 text-base placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin dark:bg-transparent cursor-copy"
+                      rows={1}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  className={cn('flex', { hidden: isExpanded })}
+                  style={{ gridArea: 'leading' }}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full hover:bg-accent outline-none ring-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconPlus className="size-6 text-muted-foreground" />
+                  </Button>
+                </div>
+
+                <div
+                  className="flex items-center gap-2"
+                  style={{ gridArea: isExpanded ? 'footer' : 'trailing' }}
+                >
+                  <div className="ms-auto flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full hover:bg-accent"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <IconMicrophone className="size-5 text-muted-foreground" />
+                    </Button>
+
+                    <motion.div
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                    >
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        disabled={isSubmitting}
+                        className={cn(
+                          'size-9 rounded-full relative bg-foreground',
+                          selectedFolder ? 'opacity-100' : 'opacity-35',
+                          isSubmitting && 'opacity-50 cursor-not-allowed'
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <IconArrowUp className="size-5 text-background" />
+                      </Button>
+                    </motion.div>
+
+                    {message.trim() && (
+                      <Button
+                        type="submit"
+                        size="icon"
+                        className="size-9 rounded-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <IconSend className="size-5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            {/* Caption with GitHub link under input */}
+            <p className="text-center text-sm text-muted-foreground mt-3 max-w-2xl mx-auto">
+              <a
+                href="https://github.com/arjundabir/chatgptwrapped"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                {'We never process or store your data. Everything stays local.'}
+              </a>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
