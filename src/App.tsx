@@ -78,8 +78,6 @@ export default function Ai01() {
   );
   const [hasReachedFirstSlide, setHasReachedFirstSlide] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -117,7 +115,7 @@ export default function Ai01() {
 
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
-        // Check if a zip file was dropped
+        // Only accept zip files
         const zipFile = Array.from(files).find((file) => isZipFile(file));
 
         if (zipFile) {
@@ -137,13 +135,9 @@ export default function Ai01() {
             setIsExtractingZip(false);
             setPendingZipFileName(null);
             setSelectedFolder(null);
-            // Could show an error message to user here
           }
-        } else {
-          // Regular folder drop
-          setUploadedFiles(files);
-          setSelectedFolder('ChatGPT Data');
         }
+        // Non-zip files/folders are ignored
       }
     };
 
@@ -380,17 +374,6 @@ export default function Ai01() {
     }
   };
 
-  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      // Get the folder name from the first file's path
-      const path = files[0].webkitRelativePath;
-      const folderName = path.split('/')[0];
-      setSelectedFolder(folderName);
-      setUploadedFiles(files);
-    }
-  };
-
   const handleZipSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -428,9 +411,9 @@ export default function Ai01() {
       {isDragging && (
         <div className="fixed inset-0 z-50 bg-white/20 backdrop-blur-sm flex flex-col items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <IconFolder className="size-16 text-[#3B82F6]" />
+            <IconFileZip className="size-16 text-[#3B82F6]" />
             <p className="text-xl font-medium text-foreground">
-              Upload your ChatGPT folder or zip file
+              Upload your ChatGPT zip file
             </p>
           </div>
         </div>
@@ -462,8 +445,7 @@ export default function Ai01() {
             </div>
             <div className="mt-2">
               <p className="text-[16px] text-foreground leading-relaxed">
-                Drag and drop the zip file or folder anywhere on this screen to
-                begin...
+                Drag and drop the zip file anywhere on this screen to begin...
               </p>
             </div>
           </>
@@ -654,39 +636,11 @@ export default function Ai01() {
               className="group/composer w-full bg-transparent"
             >
               <input
-                ref={folderInputRef}
-                type="file"
-                // @ts-expect-error - webkitdirectory is a non-standard attribute
-                webkitdirectory=""
-                directory=""
-                className="sr-only"
-                onChange={handleFolderSelect}
-              />
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="sr-only"
-                onChange={() => {}}
-              />
-
-              <input
                 ref={zipInputRef}
                 type="file"
                 accept=".zip,application/zip,application/x-zip-compressed"
                 className="sr-only"
                 onChange={handleZipSelect}
-              />
-
-              <input
-                ref={folderInputRef}
-                type="file"
-                // @ts-expect-error - webkitdirectory is a non-standard attribute
-                webkitdirectory=""
-                directory=""
-                className="sr-only"
-                onChange={handleFolderSelect}
               />
 
               <div
@@ -766,7 +720,7 @@ export default function Ai01() {
                       placeholder={
                         selectedFolder
                           ? 'Now click submit'
-                          : 'Upload ChatGPT Data folder or zip file here...'
+                          : 'Upload ChatGPT zip file here...'
                       }
                       className="min-h-0 resize-none rounded-none border-0 p-0 text-base placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin dark:bg-transparent cursor-copy"
                       rows={1}
