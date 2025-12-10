@@ -232,6 +232,56 @@ export default function Ai01() {
     };
   }, [isWrappedMode, daysActiveData, hasReachedFirstSlide]);
 
+  // Track current slide via IntersectionObserver (only increases, never decreases)
+  useEffect(() => {
+    if (!isWrappedMode) return;
+
+    // Check if we have any slides to observe
+    const hasSlides = slideRefs.current.some((ref) => ref !== null);
+    if (!hasSlides) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Find which slide index this element corresponds to
+            const slideIndex = slideRefs.current.findIndex(
+              (ref) => ref === entry.target
+            );
+            if (slideIndex !== -1) {
+              // Only update if this slide is further than the current position
+              setCurrentSlide((prev) => Math.max(prev, slideIndex));
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '-10% 0px -10% 0px',
+      }
+    );
+
+    // Observe all available slides
+    slideRefs.current.forEach((ref) => {
+      if (ref) {
+        observer.observe(ref);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [
+    isWrappedMode,
+    wrappedData,
+    daysActiveData,
+    timeOfDayData,
+    toolsAndModelsData,
+    generationsData,
+    chatsAndMessagesData,
+    finaleSlideData,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -389,7 +439,7 @@ export default function Ai01() {
         ref={scrollContainerRef}
         className={cn(
           'flex-1 overflow-auto px-4 pb-4 relative',
-          hasReachedFirstSlide && 'snap-y snap-always'
+          hasReachedFirstSlide && 'snap-y snap-proximity'
         )}
       >
         <div className="max-w-3xl w-full mx-auto pt-16">
