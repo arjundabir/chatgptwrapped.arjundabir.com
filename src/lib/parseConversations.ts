@@ -75,6 +75,12 @@ export interface ToolsAndModelsData {
   thinkingModeCount: number;
 }
 
+export interface GenerationsData {
+  imageFiles: File[];
+  imageCount: number;
+  soraVideoCount: number;
+}
+
 // Helper function to extract conversation ID and first messages from mapping
 function extractConversationData(mapping: Record<string, MappingNode>): {
   conversationId?: string;
@@ -731,6 +737,80 @@ export async function parseToolsAndModelsFromFiles(
     };
   } catch (error) {
     console.error("Error parsing tools and models from files:", error);
+    return null;
+  }
+}
+
+/**
+ * Parse generations from FileList - extract DALL-E images and Sora video counts
+ */
+export async function parseGenerationsFromFiles(
+  files: FileList
+): Promise<GenerationsData | null> {
+  try {
+    let soraVideoCount = 0;
+
+    // Extract image files from user-*/ folders
+    // According to docs: Generated Images (DALL-E) are in user-{USER_ID}/ folders
+    const imageFiles = Array.from(files).filter((file) => {
+      const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+      
+      // Check if file is in a user-* folder (anywhere in path)
+      const isUserFolder = path.includes('user-');
+      
+      // Check if it's an image file
+      const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name);
+      
+      return isUserFolder && isImage;
+    });
+
+    // Parse sora.json to count video tasks
+    let soraFile: File | null = null;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+      if (file.name === 'sora.json' || path.endsWith('/sora.json')) {
+        soraFile = file;
+        break;
+      }
+    }
+
+    if (soraFile) {
+      try {
+        const text = await soraFile.text();
+        const soraData = JSON.parse(text);
+        
+        if (soraData.tasks && Array.isArray(soraData.tasks)) {
+          // Filter tasks to 2025 if they have timestamps
+          // If no timestamps, count all tasks
+          const tasks2025 = soraData.tasks.filter((task: { created_at?: string; id?: string }) => {
+            if (task.created_at) {
+              try {
+                const taskDate = new Date(task.created_at);
+                return taskDate.getFullYear() === 2025;
+              } catch {
+                // If date parsing fails, include it
+                return true;
+              }
+            }
+            // If no timestamp, include it (assume it's from 2025)
+            return true;
+          });
+          soraVideoCount = tasks2025.length;
+        }
+      } catch (error) {
+        console.error("Error parsing sora.json:", error);
+        // Continue with soraVideoCount = 0
+      }
+    }
+
+    return {
+      imageFiles,
+      imageCount: imageFiles.length,
+      soraVideoCount,
+    };
+  } catch (error) {
+    console.error("Error parsing generations from files:", error);
     return null;
   }
 }

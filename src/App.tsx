@@ -18,15 +18,18 @@ import {
   parseDaysActiveFromFiles,
   parseTimeOfDayFromFiles,
   parseToolsAndModelsFromFiles,
+  parseGenerationsFromFiles,
   type FirstConversationData,
   type DaysActiveData,
   type TimeOfDayData,
   type ToolsAndModelsData,
+  type GenerationsData,
 } from '@/lib/parseConversations';
 import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
 import { DaysActiveSlide } from '@/components/slides/DaysActiveSlide';
 import { TimeOfDaySlide } from '@/components/slides/TimeOfDaySlide';
 import { ToolsAndModelsSlide } from '@/components/slides/ToolsAndModelsSlide';
+import { GenerationsGallerySlide } from '@/components/slides/GenerationsGallerySlide';
 import { motion } from 'motion/react';
 
 export default function Ai01() {
@@ -50,6 +53,8 @@ export default function Ai01() {
   );
   const [toolsAndModelsData, setToolsAndModelsData] =
     useState<ToolsAndModelsData | null>(null);
+  const [generationsData, setGenerationsData] =
+    useState<GenerationsData | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -132,6 +137,7 @@ export default function Ai01() {
     if (daysActiveData) maxSlide = 1; // Slide 1: Days Active
     if (timeOfDayData) maxSlide = 2; // Slide 2: Time of Day
     if (toolsAndModelsData) maxSlide = 3; // Slide 3: Tools and Models
+    if (generationsData) maxSlide = 4; // Slide 4: Generations Gallery
     // Add more slides here as they're implemented
     // ... up to slide 7 (8 total slides)
     return maxSlide;
@@ -187,6 +193,7 @@ export default function Ai01() {
       const daysActive = await parseDaysActiveFromFiles(uploadedFiles);
       const timeOfDay = await parseTimeOfDayFromFiles(uploadedFiles);
       const toolsAndModels = await parseToolsAndModelsFromFiles(uploadedFiles);
+      const generations = await parseGenerationsFromFiles(uploadedFiles);
 
       if (firstConv) {
         setWrappedData(firstConv);
@@ -198,6 +205,9 @@ export default function Ai01() {
         }
         if (toolsAndModels) {
           setToolsAndModelsData(toolsAndModels);
+        }
+        if (generations) {
+          setGenerationsData(generations);
         }
 
         // Show wrapped mode after processing
@@ -383,7 +393,21 @@ export default function Ai01() {
                   <ToolsAndModelsSlide data={toolsAndModelsData} />
                 </motion.div>
               )}
-              {/* Future slides will go here (slide 4, 5, etc.) */}
+              {/* Slide 4: Generations Gallery */}
+              {generationsData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[4] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.8 }}
+                  className="mt-8"
+                >
+                  <GenerationsGallerySlide data={generationsData} />
+                </motion.div>
+              )}
+              {/* Future slides will go here (slide 5, 6, etc.) */}
             </>
           )}
         </div>
