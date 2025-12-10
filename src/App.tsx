@@ -19,17 +19,20 @@ import {
   parseTimeOfDayFromFiles,
   parseToolsAndModelsFromFiles,
   parseGenerationsFromFiles,
+  parseChatsAndMessagesFromFiles,
   type FirstConversationData,
   type DaysActiveData,
   type TimeOfDayData,
   type ToolsAndModelsData,
   type GenerationsData,
+  type ChatsAndMessagesData,
 } from '@/lib/parseConversations';
 import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
 import { DaysActiveSlide } from '@/components/slides/DaysActiveSlide';
 import { TimeOfDaySlide } from '@/components/slides/TimeOfDaySlide';
 import { ToolsAndModelsSlide } from '@/components/slides/ToolsAndModelsSlide';
 import { GenerationsGallerySlide } from '@/components/slides/GenerationsGallerySlide';
+import { ChatsAndMessagesSlide } from '@/components/slides/ChatsAndMessagesSlide';
 import { motion } from 'motion/react';
 
 export default function Ai01() {
@@ -55,6 +58,8 @@ export default function Ai01() {
     useState<ToolsAndModelsData | null>(null);
   const [generationsData, setGenerationsData] =
     useState<GenerationsData | null>(null);
+  const [chatsAndMessagesData, setChatsAndMessagesData] =
+    useState<ChatsAndMessagesData | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -138,8 +143,8 @@ export default function Ai01() {
     if (timeOfDayData) maxSlide = 2; // Slide 2: Time of Day
     if (toolsAndModelsData) maxSlide = 3; // Slide 3: Tools and Models
     if (generationsData) maxSlide = 4; // Slide 4: Generations Gallery
+    if (chatsAndMessagesData) maxSlide = 5; // Slide 5: Chats & Messages
     // Add more slides here as they're implemented
-    // ... up to slide 7 (8 total slides)
     return maxSlide;
   };
 
@@ -194,6 +199,9 @@ export default function Ai01() {
       const timeOfDay = await parseTimeOfDayFromFiles(uploadedFiles);
       const toolsAndModels = await parseToolsAndModelsFromFiles(uploadedFiles);
       const generations = await parseGenerationsFromFiles(uploadedFiles);
+      const chatsAndMessages = await parseChatsAndMessagesFromFiles(
+        uploadedFiles
+      );
 
       if (firstConv) {
         setWrappedData(firstConv);
@@ -208,6 +216,9 @@ export default function Ai01() {
         }
         if (generations) {
           setGenerationsData(generations);
+        }
+        if (chatsAndMessages) {
+          setChatsAndMessagesData(chatsAndMessages);
         }
 
         // Show wrapped mode after processing
@@ -407,7 +418,21 @@ export default function Ai01() {
                   <GenerationsGallerySlide data={generationsData} />
                 </motion.div>
               )}
-              {/* Future slides will go here (slide 5, 6, etc.) */}
+              {/* Slide 5: Chats & Messages */}
+              {chatsAndMessagesData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[5] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.0 }}
+                  className="mt-8"
+                >
+                  <ChatsAndMessagesSlide data={chatsAndMessagesData} />
+                </motion.div>
+              )}
+              {/* Future slides will go here (slide 6, 7, etc.) */}
             </>
           )}
         </div>

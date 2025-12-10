@@ -143,6 +143,9 @@ importers:
       react-resizable-panels:
         specifier: ^3.0.6
         version: 3.0.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react-wordcloud2:
+        specifier: ^0.0.3
+        version: 0.0.3(prop-types@15.8.1)(react@19.2.1)(wordcloud@1.2.3)
       recharts:
         specifier: 2.15.4
         version: 2.15.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -158,6 +161,9 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      wordcloud:
+        specifier: ^1.2.3
+        version: 1.2.3
       zod:
         specifier: ^4.1.13
         version: 4.1.13
@@ -2418,6 +2424,13 @@ packages:
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
 
+  react-wordcloud2@0.0.3:
+    resolution: {integrity: sha512-DcmL57gBeUwxbMMInumU6wTvC2y7SIjoVQWlOFW3T5vNk9SMwdZ0kfLCXQY7+y5G9yej6MZM48DVtaxD/oeWDQ==}
+    peerDependencies:
+      prop-types: ^15.6.x
+      react: ^16.6.x
+      wordcloud: ^1.1.0
+
   react@19.2.1:
     resolution: {integrity: sha512-DGrYcCWK7tvYMnWh79yrPHt+vdx9tY+1gPZa7nJQtO/p8bLTDaHp4dzwEhQB7pZ4Xe3ok4XKuEPrVuc+wlpkmw==}
     engines: {node: '>=0.10.0'}
@@ -2669,6 +2682,9 @@ packages:
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
+
+  wordcloud@1.2.3:
+    resolution: {integrity: sha512-9by77b7Sd9e1K75kSmVeAD+JnGpiLR1Z4EX1mYQL91jKrU1/4bHw4h4DExQ+dzfT+PvihDcH7OS7V4Y5UkbF2w==}
 
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
@@ -4965,6 +4981,12 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
+  react-wordcloud2@0.0.3(prop-types@15.8.1)(react@19.2.1)(wordcloud@1.2.3):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.2.1
+      wordcloud: 1.2.3
+
   react@19.2.1: {}
 
   recharts-scale@0.4.5:
@@ -5234,6 +5256,8 @@ snapshots:
       isexe: 2.0.0
 
   word-wrap@1.2.5: {}
+
+  wordcloud@1.2.3: {}
 
   yallist@3.1.1: {}
 

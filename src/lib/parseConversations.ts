@@ -81,6 +81,12 @@ export interface GenerationsData {
   soraVideoCount: number;
 }
 
+export interface ChatsAndMessagesData {
+  totalChats: number;
+  totalMessages: number;
+  wordFrequencies: Array<{ word: string; count: number }>;
+}
+
 // Helper function to extract conversation ID and first messages from mapping
 function extractConversationData(mapping: Record<string, MappingNode>): {
   conversationId?: string;
@@ -811,6 +817,151 @@ export async function parseGenerationsFromFiles(
     };
   } catch (error) {
     console.error("Error parsing generations from files:", error);
+    return null;
+  }
+}
+
+// Helper function to extract user messages from a conversation mapping
+function extractUserMessages(mapping: Record<string, MappingNode>): number {
+  if (!mapping) return 0;
+  
+  const rootId = Object.keys(mapping).find(
+    (id) => id === "client-created-root" || !mapping[id]?.parent
+  );
+  
+  if (!rootId || !mapping[rootId]) return 0;
+  
+  let userMessageCount = 0;
+  const visited = new Set<string>();
+  
+  function traverse(nodeId: string) {
+    if (visited.has(nodeId) || !mapping[nodeId]) return;
+    visited.add(nodeId);
+    
+    const node = mapping[nodeId];
+    const message = node.message;
+    
+    // Skip if no message or if visually hidden
+    if (message && !message.metadata?.is_visually_hidden_from_conversation) {
+      const role = message.author?.role;
+      if (role === 'user') {
+        userMessageCount++;
+      }
+    }
+    
+    // Traverse children
+    if (node.children && Array.isArray(node.children)) {
+      for (const childId of node.children) {
+        traverse(childId);
+      }
+    }
+  }
+  
+  traverse(rootId);
+  return userMessageCount;
+}
+
+// Helper function to process words from titles
+function processWordsFromTitles(titles: string[]): Array<{ word: string; count: number }> {
+  // Common stop words to filter out
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+    'from', 'up', 'about', 'into', 'through', 'during', 'including', 'against', 'among',
+    'throughout', 'despite', 'towards', 'upon', 'concerning', 'to', 'of', 'in', 'for', 'on',
+    'with', 'at', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'including',
+    'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'will', 'would', 'should',
+    'could', 'may', 'might', 'must', 'can', 'cannot', 'i', 'you', 'he', 'she', 'it', 'we',
+    'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our',
+    'their', 'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how', 'all',
+    'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor',
+    'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now'
+  ]);
+  
+  const wordCounts = new Map<string, number>();
+  
+  titles.forEach((title) => {
+    if (!title) return;
+    
+    // Convert to lowercase and remove punctuation
+    const cleaned = title.toLowerCase().replace(/[^\w\s]/g, ' ');
+    
+    // Split into words and filter
+    const words = cleaned.split(/\s+/).filter((word) => {
+      // Filter out stop words and very short words (1-2 characters)
+      return word.length > 2 && !stopWords.has(word);
+    });
+    
+    // Count words
+    words.forEach((word) => {
+      wordCounts.set(word, (wordCounts.get(word) || 0) + 1);
+    });
+  });
+  
+  // Convert to array and sort by frequency (descending)
+  return Array.from(wordCounts.entries())
+    .map(([word, count]) => ({ word, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Parse conversations from FileList and extract chats, messages, and word frequencies
+ */
+export async function parseChatsAndMessagesFromFiles(
+  files: FileList
+): Promise<ChatsAndMessagesData | null> {
+  try {
+    // Find conversations.json in the file list
+    let conversationsFile: File | null = null;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Check if it's conversations.json (could be at root or in a subdirectory)
+      if (file.name === "conversations.json" || file.name.endsWith("/conversations.json")) {
+        conversationsFile = file;
+        break;
+      }
+    }
+
+    if (!conversationsFile) {
+      return null;
+    }
+
+    const text = await conversationsFile.text();
+    const conversations: Conversation[] = JSON.parse(text);
+
+    // Filter conversations for 2025
+    const conversations2025 = conversations.filter(
+      (conv) => conv.create_time >= YEAR_2025_START
+    );
+
+    if (conversations2025.length === 0) {
+      return null;
+    }
+
+    // Count total conversations
+    const totalChats = conversations2025.length;
+
+    // Count total user messages
+    let totalMessages = 0;
+    conversations2025.forEach((conv) => {
+      totalMessages += extractUserMessages(conv.mapping);
+    });
+
+    // Extract titles and process words
+    const titles = conversations2025
+      .map((conv) => conv.title)
+      .filter((title) => title && title.trim().length > 0);
+    
+    const wordFrequencies = processWordsFromTitles(titles);
+
+    return {
+      totalChats,
+      totalMessages,
+      wordFrequencies,
+    };
+  } catch (error) {
+    console.error("Error parsing chats and messages from files:", error);
     return null;
   }
 }
