@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import NumberFlow from '@number-flow/react';
 import type { FinaleSlideData } from '@/lib/parseConversations';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
     Array<{ url: string; index: number }>
   >([]);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSlideVisible, setIsSlideVisible] = useState(false);
   const slideRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -76,6 +77,26 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
       observer.disconnect();
     };
   }, [data.totalChats, data.daysUsed]);
+
+  // Track slide visibility for showing/hiding the share button
+  useEffect(() => {
+    if (!slideRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsSlideVisible(entry.isIntersecting);
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(slideRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Function to change a specific image to a different random one
   const changeImage = (imageIndex: number) => {
@@ -424,8 +445,31 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
   return (
     <div
       ref={slideRef}
-      className="flex flex-col gap-8 max-w-2xl h-[calc(100dvh-(72px+32px))] py-6"
+      className="flex flex-col gap-8 max-w-2xl h-[calc(100dvh-(72px+32px))] py-6 relative"
     >
+      {/* Share Button - Fixed top right, only visible when slide is in view */}
+      <AnimatePresence>
+        {isSlideVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="fixed top-4 right-4 z-50"
+          >
+            <Button
+              type="button"
+              onClick={handleShare}
+              disabled={isSharing}
+              size="sm"
+            >
+              <IconShare className="size-4" />
+              {isSharing ? 'Generating...' : 'Share'}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -523,7 +567,7 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
         className="mt-auto"
       >
         {/* Link */}
-        <div className="mb-4 flex justify-between items-center gap-4">
+        <div className="flex justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
             chatgptwrapped.arjundabir.com
           </p>
@@ -531,18 +575,6 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
             Unofficial — Not endorsed by OpenAI
           </p>
         </div>
-
-        {/* Share Button */}
-        <Button
-          type="button"
-          onClick={handleShare}
-          disabled={isSharing}
-          className="w-full"
-          size="lg"
-        >
-          <IconShare className="size-4" />
-          {isSharing ? 'Generating...' : 'Share'}
-        </Button>
       </motion.div>
     </div>
   );
