@@ -667,14 +667,9 @@ export default function Ai01() {
 
             {/* Caption with GitHub link under input */}
             <p className="text-center text-sm text-muted-foreground mt-3 max-w-3xl mx-auto">
-              <a
-                href="https://github.com/arjundabir/chatgptwrapped"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
+              <p>
                 {'We never process or store your data. Everything stays local.'}
-              </a>
+              </p>
             </p>
           </>
         )}
