@@ -38,6 +38,7 @@ import { ChatsAndMessagesSlide } from '@/components/slides/ChatsAndMessagesSlide
 import { FinaleSlide } from '@/components/slides/FinaleSlide';
 import { motion } from 'motion/react';
 import LogoAnimation from '@/components/logo-animation';
+import { extractZipToFileList, isZipFile } from '@/lib/extractZip';
 
 export default function Ai01() {
   const [message, setMessage] = useState('');
@@ -70,9 +71,14 @@ export default function Ai01() {
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExtractingZip, setIsExtractingZip] = useState(false);
+  const [pendingZipFileName, setPendingZipFileName] = useState<string | null>(
+    null
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -101,7 +107,7 @@ export default function Ai01() {
       e.stopPropagation();
     };
 
-    const handleDrop = (e: DragEvent) => {
+    const handleDrop = async (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
@@ -109,8 +115,33 @@ export default function Ai01() {
 
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
-        setUploadedFiles(files);
-        setSelectedFolder('ChatGPT Data');
+        // Check if a zip file was dropped
+        const zipFile = Array.from(files).find((file) => isZipFile(file));
+
+        if (zipFile) {
+          try {
+            // Show loading state in input area
+            setIsExtractingZip(true);
+            setPendingZipFileName(zipFile.name);
+            const folderName = zipFile.name.replace(/\.zip$/i, '');
+            setSelectedFolder(folderName);
+
+            const extractedFiles = await extractZipToFileList(zipFile);
+            setUploadedFiles(extractedFiles);
+            setIsExtractingZip(false);
+            setPendingZipFileName(null);
+          } catch (error) {
+            console.error('Error extracting zip:', error);
+            setIsExtractingZip(false);
+            setPendingZipFileName(null);
+            setSelectedFolder(null);
+            // Could show an error message to user here
+          }
+        } else {
+          // Regular folder drop
+          setUploadedFiles(files);
+          setSelectedFolder('ChatGPT Data');
+        }
       }
     };
 
@@ -278,8 +309,36 @@ export default function Ai01() {
     }
   };
 
+  const handleZipSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const zipFile = files[0];
+      if (isZipFile(zipFile)) {
+        try {
+          // Show loading state in input area
+          setIsExtractingZip(true);
+          setPendingZipFileName(zipFile.name);
+          const folderName = zipFile.name.replace(/\.zip$/i, '');
+          setSelectedFolder(folderName);
+
+          const extractedFiles = await extractZipToFileList(zipFile);
+          setUploadedFiles(extractedFiles);
+          setIsExtractingZip(false);
+          setPendingZipFileName(null);
+        } catch (error) {
+          console.error('Error extracting zip:', error);
+          setIsExtractingZip(false);
+          setPendingZipFileName(null);
+          setSelectedFolder(null);
+          // Could show an error message to user here
+        }
+      }
+    }
+  };
+
   const handleInputClick = () => {
-    folderInputRef.current?.click();
+    // Open zip file input by default (users can also drag folders)
+    zipInputRef.current?.click();
   };
 
   return (
@@ -289,7 +348,7 @@ export default function Ai01() {
           <div className="flex flex-col items-center gap-4">
             <IconFolder className="size-16 text-[#3B82F6]" />
             <p className="text-xl font-medium text-foreground">
-              Upload your ChatGPT folder
+              Upload your ChatGPT folder or zip file
             </p>
           </div>
         </div>
@@ -317,15 +376,10 @@ export default function Ai01() {
               />
             </div>
             <div className="mt-2">
-              <p className="text-[16px] text-foreground leading-relaxed mb-1">
-                Once you've downloaded your data:
+              <p className="text-[16px] text-foreground leading-relaxed">
+                Drag and drop the zip file or folder anywhere on this screen to
+                begin...
               </p>
-              <ul className="list-disc list-inside text-[16px] text-foreground leading-relaxed space-y-1">
-                <li>Unzip the file</li>
-                <li>
-                  Drag the exported folder anywhere on this screen to begin...
-                </li>
-              </ul>
             </div>
           </>
 
@@ -355,7 +409,7 @@ export default function Ai01() {
                 >
                   <div className="py-3 max-w-[80%]">
                     <span className="text-sm text-foreground">
-                      Processing folder...
+                      Processing folder... It might take a while
                     </span>
                   </div>
                 </motion.div>
@@ -532,6 +586,24 @@ export default function Ai01() {
                 onChange={() => {}}
               />
 
+              <input
+                ref={zipInputRef}
+                type="file"
+                accept=".zip,application/zip,application/x-zip-compressed"
+                className="sr-only"
+                onChange={handleZipSelect}
+              />
+
+              <input
+                ref={folderInputRef}
+                type="file"
+                // @ts-expect-error - webkitdirectory is a non-standard attribute
+                webkitdirectory=""
+                directory=""
+                className="sr-only"
+                onChange={handleFolderSelect}
+              />
+
               <div
                 onClick={handleInputClick}
                 className={cn(
@@ -549,26 +621,39 @@ export default function Ai01() {
                     : "'header header header' 'leading primary trailing' '. footer .'",
                 }}
               >
-                {selectedFolder && (
+                {(selectedFolder || isExtractingZip) && (
                   <div
                     className="flex items-center gap-2 px-3 py-2 mb-2 bg-muted/50 rounded-xl"
                     style={{ gridArea: 'header' }}
                   >
                     <IconFolder className="size-5 text-[#3B82F6]" />
-                    <span className="text-sm text-foreground truncate">
-                      {selectedFolder}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFolder(null);
-                        setUploadedFiles(null);
-                      }}
-                      className="ml-auto text-muted-foreground hover:text-foreground"
-                    >
-                      <IconPlus className="size-4 rotate-45" />
-                    </button>
+                    {isExtractingZip ? (
+                      <>
+                        <span className="text-sm text-foreground truncate">
+                          {pendingZipFileName || 'Extracting...'}
+                        </span>
+                        <div className="ml-auto size-4 border-2 border-[#3B82F6] border-t-transparent rounded-full animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm text-foreground truncate">
+                          {selectedFolder}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFolder(null);
+                            setUploadedFiles(null);
+                            setIsExtractingZip(false);
+                            setPendingZipFileName(null);
+                          }}
+                          className="ml-auto text-muted-foreground hover:text-foreground"
+                        >
+                          <IconPlus className="size-4 rotate-45" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -592,7 +677,7 @@ export default function Ai01() {
                       placeholder={
                         selectedFolder
                           ? 'Now click submit'
-                          : 'Upload ChatGPT Data here...'
+                          : 'Upload ChatGPT Data folder or zip file here...'
                       }
                       className="min-h-0 resize-none rounded-none border-0 p-0 text-base placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin dark:bg-transparent cursor-copy"
                       rows={1}
@@ -638,11 +723,12 @@ export default function Ai01() {
                         type="submit"
                         variant="ghost"
                         size="icon"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isExtractingZip}
                         className={cn(
                           'size-9 rounded-full relative bg-foreground',
                           selectedFolder ? 'opacity-100' : 'opacity-35',
-                          isSubmitting && 'opacity-50 cursor-not-allowed'
+                          (isSubmitting || isExtractingZip) &&
+                            'opacity-50 cursor-not-allowed'
                         )}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -654,7 +740,12 @@ export default function Ai01() {
                       <Button
                         type="submit"
                         size="icon"
-                        className="size-9 rounded-full"
+                        disabled={isSubmitting || isExtractingZip}
+                        className={cn(
+                          'size-9 rounded-full',
+                          (isSubmitting || isExtractingZip) &&
+                            'opacity-50 cursor-not-allowed'
+                        )}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <IconSend className="size-5" />
