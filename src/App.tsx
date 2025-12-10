@@ -75,6 +75,7 @@ export default function Ai01() {
   const [pendingZipFileName, setPendingZipFileName] = useState<string | null>(
     null
   );
+  const [hasReachedFirstSlide, setHasReachedFirstSlide] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +203,35 @@ export default function Ai01() {
     }
   }, [currentSlide, isWrappedMode]);
 
+  // Enable scroll snap when second slide comes into view
+  useEffect(() => {
+    if (!isWrappedMode || !daysActiveData || hasReachedFirstSlide) return;
+
+    const secondSlideElement = slideRefs.current[1];
+    if (!secondSlideElement) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            // Second slide is in view, enable scroll snap
+            setHasReachedFirstSlide(true);
+          }
+        });
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '-20% 0px -20% 0px', // Trigger when slide is well into view
+      }
+    );
+
+    observer.observe(secondSlideElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isWrappedMode, daysActiveData, hasReachedFirstSlide]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -274,6 +304,7 @@ export default function Ai01() {
         setTimeout(() => {
           setIsWrappedMode(true);
           setCurrentSlide(0); // Start at first slide
+          setHasReachedFirstSlide(false); // Reset scroll snap state
           setIsSubmitting(false);
         }, 1500);
       }
@@ -356,7 +387,10 @@ export default function Ai01() {
 
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-auto px-4 pb-4 relative"
+        className={cn(
+          'flex-1 overflow-auto px-4 pb-4 relative',
+          hasReachedFirstSlide && 'snap-y snap-always'
+        )}
       >
         <div className="max-w-3xl w-full mx-auto pt-16">
           {/* Instructions - always visible */}
@@ -429,7 +463,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <FirstConversationSlide data={wrappedData} />
                 </motion.div>
@@ -443,7 +477,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <DaysActiveSlide data={daysActiveData} />
                 </motion.div>
@@ -457,7 +491,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <TimeOfDaySlide data={timeOfDayData} />
                 </motion.div>
@@ -471,7 +505,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <ToolsAndModelsSlide data={toolsAndModelsData} />
                 </motion.div>
@@ -485,7 +519,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.8 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <GenerationsGallerySlide data={generationsData} />
                 </motion.div>
@@ -499,7 +533,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 1.0 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <ChatsAndMessagesSlide data={chatsAndMessagesData} />
                 </motion.div>
@@ -513,7 +547,7 @@ export default function Ai01() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 1.2 }}
-                  className="mt-8"
+                  className={cn('mt-8', hasReachedFirstSlide && 'snap-start')}
                 >
                   <FinaleSlide data={finaleSlideData} />
                 </motion.div>
