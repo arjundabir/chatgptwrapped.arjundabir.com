@@ -87,6 +87,13 @@ export interface ChatsAndMessagesData {
   wordFrequencies: Array<{ word: string; count: number }>;
 }
 
+export interface FinaleSlideData {
+  totalChats: number;
+  daysUsed: number;
+  personalityType: 'night owl' | 'early bird' | 'all-day chatter';
+  imageFiles: File[];
+}
+
 // Helper function to extract conversation ID and first messages from mapping
 function extractConversationData(mapping: Record<string, MappingNode>): {
   conversationId?: string;
@@ -964,5 +971,26 @@ export async function parseChatsAndMessagesFromFiles(
     console.error("Error parsing chats and messages from files:", error);
     return null;
   }
+}
+
+/**
+ * Parse finale slide data by combining data from other parsed sources
+ */
+export function parseFinaleSlideData(
+  chatsAndMessagesData: ChatsAndMessagesData | null,
+  daysActiveData: DaysActiveData | null,
+  timeOfDayData: TimeOfDayData | null,
+  generationsData: GenerationsData | null
+): FinaleSlideData | null {
+  if (!chatsAndMessagesData || !daysActiveData || !timeOfDayData) {
+    return null;
+  }
+
+  return {
+    totalChats: chatsAndMessagesData.totalChats,
+    daysUsed: daysActiveData.activeDaysInYear,
+    personalityType: timeOfDayData.personalityType,
+    imageFiles: generationsData?.imageFiles || [],
+  };
 }
 

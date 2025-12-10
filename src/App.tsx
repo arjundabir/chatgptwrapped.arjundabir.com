@@ -20,12 +20,14 @@ import {
   parseToolsAndModelsFromFiles,
   parseGenerationsFromFiles,
   parseChatsAndMessagesFromFiles,
+  parseFinaleSlideData,
   type FirstConversationData,
   type DaysActiveData,
   type TimeOfDayData,
   type ToolsAndModelsData,
   type GenerationsData,
   type ChatsAndMessagesData,
+  type FinaleSlideData,
 } from '@/lib/parseConversations';
 import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
 import { DaysActiveSlide } from '@/components/slides/DaysActiveSlide';
@@ -33,6 +35,7 @@ import { TimeOfDaySlide } from '@/components/slides/TimeOfDaySlide';
 import { ToolsAndModelsSlide } from '@/components/slides/ToolsAndModelsSlide';
 import { GenerationsGallerySlide } from '@/components/slides/GenerationsGallerySlide';
 import { ChatsAndMessagesSlide } from '@/components/slides/ChatsAndMessagesSlide';
+import { FinaleSlide } from '@/components/slides/FinaleSlide';
 import { motion } from 'motion/react';
 
 export default function Ai01() {
@@ -60,6 +63,8 @@ export default function Ai01() {
     useState<GenerationsData | null>(null);
   const [chatsAndMessagesData, setChatsAndMessagesData] =
     useState<ChatsAndMessagesData | null>(null);
+  const [finaleSlideData, setFinaleSlideData] =
+    useState<FinaleSlideData | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -144,6 +149,7 @@ export default function Ai01() {
     if (toolsAndModelsData) maxSlide = 3; // Slide 3: Tools and Models
     if (generationsData) maxSlide = 4; // Slide 4: Generations Gallery
     if (chatsAndMessagesData) maxSlide = 5; // Slide 5: Chats & Messages
+    if (finaleSlideData) maxSlide = 6; // Slide 6: Finale
     // Add more slides here as they're implemented
     return maxSlide;
   };
@@ -219,6 +225,17 @@ export default function Ai01() {
         }
         if (chatsAndMessages) {
           setChatsAndMessagesData(chatsAndMessages);
+        }
+
+        // Parse finale slide data (combines data from other slides)
+        const finaleData = parseFinaleSlideData(
+          chatsAndMessages,
+          daysActive,
+          timeOfDay,
+          generations
+        );
+        if (finaleData) {
+          setFinaleSlideData(finaleData);
         }
 
         // Show wrapped mode after processing
@@ -432,7 +449,21 @@ export default function Ai01() {
                   <ChatsAndMessagesSlide data={chatsAndMessagesData} />
                 </motion.div>
               )}
-              {/* Future slides will go here (slide 6, 7, etc.) */}
+              {/* Slide 6: Finale */}
+              {finaleSlideData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[6] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.2 }}
+                  className="mt-8"
+                >
+                  <FinaleSlide data={finaleSlideData} />
+                </motion.div>
+              )}
+              {/* Future slides will go here (slide 7, 8, etc.) */}
             </>
           )}
         </div>
