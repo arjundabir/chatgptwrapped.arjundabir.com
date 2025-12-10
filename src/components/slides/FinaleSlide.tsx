@@ -365,13 +365,28 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
             ? `
         <div style="
           display: flex;
-          gap: 20px;
+          flex-direction: column;
           margin-bottom: auto;
           flex: 1;
-          align-items: flex-start;
           min-height: 0;
         ">
-          ${imageHTML}
+          <p style="
+            font-size: 20px;
+            color: #999999;
+            margin: 0 0 16px 0;
+            font-weight: 400;
+            text-align: right;
+            letter-spacing: 0.01em;
+          ">Generated Images</p>
+          <div style="
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            align-items: flex-start;
+            min-height: 0;
+          ">
+            ${imageHTML}
+          </div>
         </div>
         `
             : ''
