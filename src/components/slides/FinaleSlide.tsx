@@ -471,6 +471,9 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
           transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
           className="flex flex-col gap-4"
         >
+          <p className="text-xs text-muted-foreground text-right">
+            Generated Images
+          </p>
           <div className="grid grid-cols-3 gap-4 flex-wrap">
             {imageUrls.map((imageData, index) => (
               <div key={index} className="flex flex-col items-center gap-2">

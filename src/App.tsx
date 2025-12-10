@@ -37,6 +37,7 @@ import { GenerationsGallerySlide } from '@/components/slides/GenerationsGalleryS
 import { ChatsAndMessagesSlide } from '@/components/slides/ChatsAndMessagesSlide';
 import { FinaleSlide } from '@/components/slides/FinaleSlide';
 import { motion } from 'motion/react';
+import LogoAnimation from '@/components/logo-animation';
 
 export default function Ai01() {
   const [message, setMessage] = useState('');
@@ -472,31 +473,40 @@ export default function Ai01() {
       <div className="w-full px-4 pt-4 border-border/50 bg-transparent border-t-0 opacity-100 pb-4">
         {isWrappedMode ? (
           <div className="flex justify-center">
-            <Button
-              type="button"
-              size="icon"
-              className="size-10 rounded-full bg-white hover:bg-gray-100 border border-border shadow"
-              onClick={() => {
-                const maxSlide = getMaxSlide();
+            {currentSlide === getMaxSlide() ? (
+              <a
+                className="size-10 flex items-center justify-center"
+                href="https://arjundabir.com"
+              >
+                <LogoAnimation />
+              </a>
+            ) : (
+              <Button
+                type="button"
+                size="icon"
+                className="size-10 rounded-full bg-white hover:bg-gray-100 border border-border shadow"
+                onClick={() => {
+                  const maxSlide = getMaxSlide();
 
-                if (currentSlide < maxSlide) {
-                  // Move to next slide
-                  setCurrentSlide(currentSlide + 1);
-                } else {
-                  // If on last slide, scroll to bottom
-                  setTimeout(() => {
-                    if (scrollContainerRef.current) {
-                      scrollContainerRef.current.scrollTo({
-                        top: scrollContainerRef.current.scrollHeight,
-                        behavior: 'smooth',
-                      });
-                    }
-                  }, 50);
-                }
-              }}
-            >
-              <IconArrowDown className="size-5 text-foreground" />
-            </Button>
+                  if (currentSlide < maxSlide) {
+                    // Move to next slide
+                    setCurrentSlide(currentSlide + 1);
+                  } else {
+                    // If on last slide, scroll to bottom
+                    setTimeout(() => {
+                      if (scrollContainerRef.current) {
+                        scrollContainerRef.current.scrollTo({
+                          top: scrollContainerRef.current.scrollHeight,
+                          behavior: 'smooth',
+                        });
+                      }
+                    }, 50);
+                  }
+                }}
+              >
+                <IconArrowDown className="size-5 text-foreground" />
+              </Button>
+            )}
           </div>
         ) : (
           <>
