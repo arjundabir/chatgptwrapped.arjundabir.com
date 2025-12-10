@@ -22,11 +22,14 @@ interface MappingNode {
       parts?: string[];
       content_type?: string;
     } | string;
+    recipient?: string;
     metadata?: {
       conversation_id?: string;
       turn_exchange_id?: string;
       parent_id?: string;
       is_visually_hidden_from_conversation?: boolean;
+      model_slug?: string;
+      reasoning_status?: string;
       [key: string]: unknown;
     };
   } | null;
@@ -55,6 +58,21 @@ export interface DaysActiveData {
   longestStreak: number;
   activeDaysInYear: number;
   contributions: Array<{ date: string; count: number; level: number }>;
+}
+
+export interface TimeOfDayData {
+  personalityType: 'night owl' | 'early bird' | 'all-day chatter';
+  hourlyData: Array<{ hour: number; count: number; label: string }>;
+  dayOfWeek: {
+    weekday: { count: number; percentage: number };
+    weekend: { count: number; percentage: number };
+  };
+}
+
+export interface ToolsAndModelsData {
+  tools: Array<{ name: string; count: number }>;
+  models: Array<{ name: string; count: number }>;
+  thinkingModeCount: number;
 }
 
 // Helper function to extract conversation ID and first messages from mapping
@@ -400,6 +418,319 @@ export async function parseDaysActiveFromFiles(
     };
   } catch (error) {
     console.error("Error parsing days active from files:", error);
+    return null;
+  }
+}
+
+// Helper function to extract all messages from a conversation mapping
+function extractAllMessages(mapping: Record<string, MappingNode>): Array<{
+  role: string;
+  recipient?: string;
+  modelSlug?: string;
+  reasoningStatus?: string;
+}> {
+  if (!mapping) return [];
+  
+  const rootId = Object.keys(mapping).find(
+    (id) => id === "client-created-root" || !mapping[id]?.parent
+  );
+  
+  if (!rootId || !mapping[rootId]) return [];
+  
+  const messages: Array<{
+    role: string;
+    recipient?: string;
+    modelSlug?: string;
+    reasoningStatus?: string;
+  }> = [];
+  const visited = new Set<string>();
+  
+  function traverse(nodeId: string) {
+    if (visited.has(nodeId) || !mapping[nodeId]) return;
+    visited.add(nodeId);
+    
+    const node = mapping[nodeId];
+    const message = node.message;
+    
+    // Skip if no message or if visually hidden
+    if (message && !message.metadata?.is_visually_hidden_from_conversation) {
+      const role = message.author?.role;
+      if (role) {
+        const recipient = message.recipient;
+        const metadata = message.metadata || {};
+        const modelSlug = metadata.model_slug as string | undefined;
+        const reasoningStatus = metadata.reasoning_status as string | undefined;
+        
+        messages.push({
+          role,
+          recipient,
+          modelSlug,
+          reasoningStatus,
+        });
+      }
+    }
+    
+    // Traverse children
+    if (node.children && Array.isArray(node.children)) {
+      for (const childId of node.children) {
+        traverse(childId);
+      }
+    }
+  }
+  
+  traverse(rootId);
+  return messages;
+}
+
+// Helper function to map recipient values to friendly tool names
+function mapRecipientToToolName(recipient: string | undefined): string | null {
+  if (!recipient || recipient === 'all') return null;
+  
+  if (recipient.startsWith('web.') || recipient === 'web' || recipient === 'web.search') {
+    return 'Web Search';
+  }
+  if (recipient === 'python') {
+    return 'Code Interpreter';
+  }
+  if (recipient.startsWith('canmore.')) {
+    return 'Canvas';
+  }
+  if (recipient === 'bio') {
+    return 'Memory';
+  }
+  if (recipient.startsWith('browser.')) {
+    return 'Web Browsing';
+  }
+  if (recipient.startsWith('computer.')) {
+    return 'Computer Use';
+  }
+  if (recipient.startsWith('research_kickoff_tool.')) {
+    return 'Deep Research';
+  }
+  if (recipient === 'dalle.text2im') {
+    return 'DALL-E';
+  }
+  
+  // Return null for unknown recipients
+  return null;
+}
+
+// Helper function to format model names
+function formatModelName(modelSlug: string | undefined): string | null {
+  if (!modelSlug) return null;
+  
+  // Return the model slug as-is, or format it nicely
+  return modelSlug;
+}
+
+/**
+ * Parse conversations from FileList and calculate time of day patterns
+ */
+export async function parseTimeOfDayFromFiles(
+  files: FileList
+): Promise<TimeOfDayData | null> {
+  try {
+    // Find conversations.json in the file list
+    let conversationsFile: File | null = null;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Check if it's conversations.json (could be at root or in a subdirectory)
+      if (file.name === "conversations.json" || file.name.endsWith("/conversations.json")) {
+        conversationsFile = file;
+        break;
+      }
+    }
+
+    if (!conversationsFile) {
+      return null;
+    }
+
+    const text = await conversationsFile.text();
+    const conversations: Conversation[] = JSON.parse(text);
+
+    // Filter conversations for 2025
+    const conversations2025 = conversations.filter(
+      (conv) => conv.create_time >= YEAR_2025_START
+    );
+
+    if (conversations2025.length === 0) {
+      return null;
+    }
+
+    // Count by hour (0-23) and day of week
+    const hourlyCounts = new Array(24).fill(0);
+    let weekdayCount = 0;
+    let weekendCount = 0;
+
+    conversations2025.forEach((conv) => {
+      const date = new Date(conv.create_time * 1000);
+      const hour = date.getHours();
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+
+      // Count by hour
+      hourlyCounts[hour]++;
+
+      // Categorize by day of week
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        // Saturday or Sunday
+        weekendCount++;
+      } else {
+        // Monday-Friday
+        weekdayCount++;
+      }
+    });
+
+    const totalConversations = conversations2025.length;
+
+    // Create hourly data array with labels (12am to 11pm)
+    const hourlyData = hourlyCounts.map((count, hour) => {
+      let label: string;
+      if (hour === 0) {
+        label = '12am';
+      } else if (hour < 12) {
+        label = `${hour}am`;
+      } else if (hour === 12) {
+        label = '12pm';
+      } else {
+        label = `${hour - 12}pm`;
+      }
+      return { hour, count, label };
+    });
+
+    // Calculate percentages for day of week
+    const weekdayPercentage = totalConversations > 0 ? (weekdayCount / totalConversations) * 100 : 0;
+    const weekendPercentage = totalConversations > 0 ? (weekendCount / totalConversations) * 100 : 0;
+
+    // Determine personality type based on hourly data
+    // Find peak hours: night (22-5), morning (6-11), afternoon (12-17), evening (18-21)
+    const nightHours = [22, 23, 0, 1, 2, 3, 4, 5];
+    const morningHours = [6, 7, 8, 9, 10, 11];
+    const afternoonHours = [12, 13, 14, 15, 16, 17];
+    const eveningHours = [18, 19, 20, 21];
+
+    const nightCount = nightHours.reduce((sum, h) => sum + hourlyCounts[h], 0);
+    const morningCount = morningHours.reduce((sum, h) => sum + hourlyCounts[h], 0);
+    const afternoonCount = afternoonHours.reduce((sum, h) => sum + hourlyCounts[h], 0);
+    const eveningCount = eveningHours.reduce((sum, h) => sum + hourlyCounts[h], 0);
+
+    const nightPercentage = totalConversations > 0 ? (nightCount / totalConversations) * 100 : 0;
+    const morningPercentage = totalConversations > 0 ? (morningCount / totalConversations) * 100 : 0;
+    const afternoonPercentage = totalConversations > 0 ? (afternoonCount / totalConversations) * 100 : 0;
+    const eveningPercentage = totalConversations > 0 ? (eveningCount / totalConversations) * 100 : 0;
+
+    // Determine personality type
+    let personalityType: 'night owl' | 'early bird' | 'all-day chatter';
+    
+    // Find the highest time period
+    const maxTime = Math.max(morningPercentage, afternoonPercentage, eveningPercentage, nightPercentage);
+    
+    if (nightPercentage > 30 || (nightPercentage === maxTime && nightPercentage > 0)) {
+      personalityType = 'night owl';
+    } else if (morningPercentage > 30 || (morningPercentage === maxTime && morningPercentage > 0)) {
+      personalityType = 'early bird';
+    } else {
+      personalityType = 'all-day chatter';
+    }
+
+    return {
+      personalityType,
+      hourlyData,
+      dayOfWeek: {
+        weekday: { count: weekdayCount, percentage: weekdayPercentage },
+        weekend: { count: weekendCount, percentage: weekendPercentage },
+      },
+    };
+  } catch (error) {
+    console.error("Error parsing time of day from files:", error);
+    return null;
+  }
+}
+
+/**
+ * Parse conversations from FileList and extract tools and models usage
+ */
+export async function parseToolsAndModelsFromFiles(
+  files: FileList
+): Promise<ToolsAndModelsData | null> {
+  try {
+    // Find conversations.json in the file list
+    let conversationsFile: File | null = null;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Check if it's conversations.json (could be at root or in a subdirectory)
+      if (file.name === "conversations.json" || file.name.endsWith("/conversations.json")) {
+        conversationsFile = file;
+        break;
+      }
+    }
+
+    if (!conversationsFile) {
+      return null;
+    }
+
+    const text = await conversationsFile.text();
+    const conversations: Conversation[] = JSON.parse(text);
+
+    // Filter conversations for 2025
+    const conversations2025 = conversations.filter(
+      (conv) => conv.create_time >= YEAR_2025_START
+    );
+
+    if (conversations2025.length === 0) {
+      return null;
+    }
+
+    // Count tools and models
+    const toolCounts = new Map<string, number>();
+    const modelCounts = new Map<string, number>();
+    let thinkingModeCount = 0;
+
+    conversations2025.forEach((conv) => {
+      const messages = extractAllMessages(conv.mapping);
+      
+      messages.forEach((msg) => {
+        // Count tools (from recipient field on user/assistant messages)
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          const toolName = mapRecipientToToolName(msg.recipient);
+          if (toolName) {
+            toolCounts.set(toolName, (toolCounts.get(toolName) || 0) + 1);
+          }
+        }
+        
+        // Count models (from assistant messages)
+        if (msg.role === 'assistant' && msg.modelSlug) {
+          const modelName = formatModelName(msg.modelSlug);
+          if (modelName) {
+            modelCounts.set(modelName, (modelCounts.get(modelName) || 0) + 1);
+          }
+          
+          // Count thinking mode triggers
+          if (msg.reasoningStatus || msg.modelSlug.includes('thinking')) {
+            thinkingModeCount++;
+          }
+        }
+      });
+    });
+
+    // Convert tools to array and sort alphabetically
+    const tools = Array.from(toolCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    // Convert models to array and sort by count descending
+    const models = Array.from(modelCounts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      tools,
+      models,
+      thinkingModeCount,
+    };
+  } catch (error) {
+    console.error("Error parsing tools and models from files:", error);
     return null;
   }
 }

@@ -16,17 +16,26 @@ import { useRef, useState, useEffect } from 'react';
 import {
   parseFirstConversationFromFiles,
   parseDaysActiveFromFiles,
+  parseTimeOfDayFromFiles,
+  parseToolsAndModelsFromFiles,
   type FirstConversationData,
   type DaysActiveData,
+  type TimeOfDayData,
+  type ToolsAndModelsData,
 } from '@/lib/parseConversations';
 import { FirstConversationSlide } from '@/components/slides/FirstConversationSlide';
 import { DaysActiveSlide } from '@/components/slides/DaysActiveSlide';
+import { TimeOfDaySlide } from '@/components/slides/TimeOfDaySlide';
+import { ToolsAndModelsSlide } from '@/components/slides/ToolsAndModelsSlide';
 import { motion } from 'motion/react';
 
 export default function Ai01() {
   const [message, setMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [submittedFolderName, setSubmittedFolderName] = useState<string | null>(
+    null
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [isWrappedMode, setIsWrappedMode] = useState(false);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
@@ -36,6 +45,11 @@ export default function Ai01() {
   const [daysActiveData, setDaysActiveData] = useState<DaysActiveData | null>(
     null
   );
+  const [timeOfDayData, setTimeOfDayData] = useState<TimeOfDayData | null>(
+    null
+  );
+  const [toolsAndModelsData, setToolsAndModelsData] =
+    useState<ToolsAndModelsData | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<FileList | null>(null);
   const [showChatMessages, setShowChatMessages] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
@@ -116,9 +130,9 @@ export default function Ai01() {
     let maxSlide = -1;
     if (wrappedData) maxSlide = 0; // Slide 0: First Conversation
     if (daysActiveData) maxSlide = 1; // Slide 1: Days Active
+    if (timeOfDayData) maxSlide = 2; // Slide 2: Time of Day
+    if (toolsAndModelsData) maxSlide = 3; // Slide 3: Tools and Models
     // Add more slides here as they're implemented
-    // if (someOtherData) maxSlide = 2;
-    // if (anotherData) maxSlide = 3;
     // ... up to slide 7 (8 total slides)
     return maxSlide;
   };
@@ -154,6 +168,12 @@ export default function Ai01() {
     if (selectedFolder && uploadedFiles && !isWrappedMode) {
       setIsSubmitting(true);
 
+      // Store folder name for chat message display
+      setSubmittedFolderName(selectedFolder);
+
+      // Clear folder from input field UI (but keep uploadedFiles for processing)
+      setSelectedFolder(null);
+
       // Show user message with folder
       setShowChatMessages(true);
 
@@ -165,11 +185,19 @@ export default function Ai01() {
       // Parse conversations
       const firstConv = await parseFirstConversationFromFiles(uploadedFiles);
       const daysActive = await parseDaysActiveFromFiles(uploadedFiles);
+      const timeOfDay = await parseTimeOfDayFromFiles(uploadedFiles);
+      const toolsAndModels = await parseToolsAndModelsFromFiles(uploadedFiles);
 
       if (firstConv) {
         setWrappedData(firstConv);
         if (daysActive) {
           setDaysActiveData(daysActive);
+        }
+        if (timeOfDay) {
+          setTimeOfDayData(timeOfDay);
+        }
+        if (toolsAndModels) {
+          setToolsAndModelsData(toolsAndModels);
         }
 
         // Show wrapped mode after processing
@@ -274,7 +302,7 @@ export default function Ai01() {
                 <div className="flex items-center gap-2 px-4 py-3 bg-muted rounded-2xl max-w-[80%]">
                   <IconFolder className="size-5 text-[#3B82F6] shrink-0" />
                   <span className="text-sm text-foreground">
-                    {selectedFolder}
+                    {submittedFolderName}
                   </span>
                 </div>
               </motion.div>
@@ -327,7 +355,35 @@ export default function Ai01() {
                   <DaysActiveSlide data={daysActiveData} />
                 </motion.div>
               )}
-              {/* Future slides will go here (slide 2, 3, 4, etc.) */}
+              {/* Slide 2: Time of Day */}
+              {timeOfDayData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[2] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="mt-8"
+                >
+                  <TimeOfDaySlide data={timeOfDayData} />
+                </motion.div>
+              )}
+              {/* Slide 3: Tools and Models */}
+              {toolsAndModelsData && (
+                <motion.div
+                  ref={(el) => {
+                    slideRefs.current[3] = el;
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  className="mt-8"
+                >
+                  <ToolsAndModelsSlide data={toolsAndModelsData} />
+                </motion.div>
+              )}
+              {/* Future slides will go here (slide 4, 5, etc.) */}
             </>
           )}
         </div>
@@ -417,6 +473,7 @@ export default function Ai01() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedFolder(null);
+                        setUploadedFiles(null);
                       }}
                       className="ml-auto text-muted-foreground hover:text-foreground"
                     >
