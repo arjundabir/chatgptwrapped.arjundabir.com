@@ -11,6 +11,7 @@ import {
   IconArrowUp,
   IconArrowDown,
   IconFolder,
+  IconFileZip,
 } from '@tabler/icons-react';
 import { useRef, useState, useEffect } from 'react';
 import {
@@ -710,7 +711,11 @@ export default function Ai01() {
                     className="flex items-center gap-2 px-3 py-2 mb-2 bg-muted/50 rounded-xl"
                     style={{ gridArea: 'header' }}
                   >
-                    <IconFolder className="size-5 text-[#3B82F6]" />
+                    {isExtractingZip ? (
+                      <IconFileZip className="size-5 text-[#3B82F6]" />
+                    ) : (
+                      <IconFolder className="size-5 text-[#3B82F6]" />
+                    )}
                     {isExtractingZip ? (
                       <>
                         <span className="text-sm text-foreground truncate">
