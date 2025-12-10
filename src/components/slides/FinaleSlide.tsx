@@ -450,7 +450,6 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
           <NumberFlow
             value={totalChats}
             className="text-5xl font-bold text-foreground"
-            formatOptions={{ useGrouping: true }}
           />
           <p className="text-base text-muted-foreground font-semibold mt-1">
             Chat sent this year
@@ -462,7 +461,6 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
           <NumberFlow
             value={daysUsed}
             className="text-5xl font-bold text-foreground"
-            formatOptions={{ useGrouping: true }}
           />
           <p className="text-base text-muted-foreground font-semibold mt-1">
             Days used this year

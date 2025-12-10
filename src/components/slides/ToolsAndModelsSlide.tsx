@@ -118,7 +118,7 @@ export function ToolsAndModelsSlide({ data }: ToolsAndModelsSlideProps) {
                   animationDuration={800}
                   animationEasing="ease-out"
                 >
-                  {modelsChartData.map((entry, index) => (
+                  {modelsChartData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill="var(--color-count)" />
                   ))}
                   <LabelList

@@ -145,7 +145,6 @@ export function ChatsAndMessagesSlide({ data }: ChatsAndMessagesSlideProps) {
           <NumberFlow
             value={totalChats}
             className="text-6xl font-bold text-foreground"
-            formatOptions={{ useGrouping: true }}
           />
         </div>
 
@@ -157,7 +156,6 @@ export function ChatsAndMessagesSlide({ data }: ChatsAndMessagesSlideProps) {
           <NumberFlow
             value={totalMessages}
             className="text-6xl font-bold text-foreground"
-            formatOptions={{ useGrouping: true }}
           />
         </div>
       </motion.div>

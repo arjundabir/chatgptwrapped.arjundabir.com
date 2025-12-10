@@ -29,8 +29,8 @@ export default function Ai01() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
 
     if (message.trim()) {
       setMessage('');
@@ -56,7 +56,7 @@ export default function Ai01() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit();
     }
   };
 
@@ -68,7 +68,7 @@ export default function Ai01() {
           type="file"
           multiple
           className="sr-only"
-          onChange={(e) => {}}
+          onChange={() => {}}
         />
 
         <div

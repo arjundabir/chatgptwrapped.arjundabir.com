@@ -24,7 +24,6 @@ interface DaysActiveSlideProps {
 
 export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
   // State for animated numbers - start at 0 and count up
-  const [totalDays, setTotalDays] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [activeDaysInYear, setActiveDaysInYear] = useState(0);
   const [avgConversationsPerDay, setAvgConversationsPerDay] = useState(0);
@@ -52,7 +51,6 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
             hasAnimated.current = true;
             // Small delay to ensure NumberFlow is mounted and ready
             setTimeout(() => {
-              setTotalDays(data.totalDays);
               setLongestStreak(data.longestStreak);
               setActiveDaysInYear(data.activeDaysInYear);
               setAvgConversationsPerDay(calculatedAvg);
@@ -69,19 +67,13 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
     return () => {
       observer.disconnect();
     };
-  }, [
-    data.totalDays,
-    data.longestStreak,
-    data.activeDaysInYear,
-    calculatedAvg,
-  ]);
+  }, [data.longestStreak, data.activeDaysInYear, calculatedAvg]);
 
   // Function to trigger count-up animation (fallback for onAnimationComplete)
   const startCountUp = () => {
     if (!hasAnimated.current) {
       hasAnimated.current = true;
       setTimeout(() => {
-        setTotalDays(data.totalDays);
         setLongestStreak(data.longestStreak);
         setActiveDaysInYear(data.activeDaysInYear);
         setAvgConversationsPerDay(calculatedAvg);
