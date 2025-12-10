@@ -27,6 +27,17 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
   const [totalDays, setTotalDays] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [activeDaysInYear, setActiveDaysInYear] = useState(0);
+  const [avgConversationsPerDay, setAvgConversationsPerDay] = useState(0);
+
+  // Calculate average conversations per active day
+  const calculatedAvg =
+    data.contributions.filter((d) => d.count > 0).length > 0
+      ? Math.round(
+          (data.contributions.reduce((sum, d) => sum + d.count, 0) /
+            data.contributions.filter((d) => d.count > 0).length) *
+            10
+        ) / 10
+      : 0;
   const statsRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
@@ -44,6 +55,7 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
               setTotalDays(data.totalDays);
               setLongestStreak(data.longestStreak);
               setActiveDaysInYear(data.activeDaysInYear);
+              setAvgConversationsPerDay(calculatedAvg);
             }, 300);
             observer.disconnect();
           }
@@ -57,7 +69,12 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
     return () => {
       observer.disconnect();
     };
-  }, [data.totalDays, data.longestStreak, data.activeDaysInYear]);
+  }, [
+    data.totalDays,
+    data.longestStreak,
+    data.activeDaysInYear,
+    calculatedAvg,
+  ]);
 
   // Function to trigger count-up animation (fallback for onAnimationComplete)
   const startCountUp = () => {
@@ -67,6 +84,7 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
         setTotalDays(data.totalDays);
         setLongestStreak(data.longestStreak);
         setActiveDaysInYear(data.activeDaysInYear);
+        setAvgConversationsPerDay(calculatedAvg);
       }, 100);
     }
   };
@@ -112,11 +130,11 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
           <Card className="rounded-none border-0 shadow-sm py-0 h-full">
             <CardContent className="p-4 sm:p-6 flex flex-col h-full">
               <CardTitle className="text-base font-normal min-h-12 flex items-start">
-                Total days
+                Days you used ChatGPT in the year
               </CardTitle>
               <div className="mt-1 flex items-baseline">
                 <NumberFlow
-                  value={totalDays}
+                  value={activeDaysInYear}
                   className="text-4xl font-bold text-primary"
                 />
               </div>
@@ -140,11 +158,11 @@ export function DaysActiveSlide({ data }: DaysActiveSlideProps) {
           <Card className="rounded-none border-0 shadow-sm py-0 h-full">
             <CardContent className="p-4 sm:p-6 flex flex-col h-full">
               <CardTitle className="text-base font-normal min-h-12 flex items-start">
-                Days you used ChatGPT in the year
+                Average conversations per day
               </CardTitle>
               <div className="mt-1 flex items-baseline">
                 <NumberFlow
-                  value={activeDaysInYear}
+                  value={avgConversationsPerDay}
                   className="text-4xl font-bold text-primary"
                 />
               </div>
