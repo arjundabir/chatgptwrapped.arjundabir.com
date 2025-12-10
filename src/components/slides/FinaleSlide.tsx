@@ -4,7 +4,7 @@ import NumberFlow from '@number-flow/react';
 import type { FinaleSlideData } from '@/lib/parseConversations';
 import { Button } from '@/components/ui/button';
 import { IconRefresh, IconShare } from '@tabler/icons-react';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 
 interface FinaleSlideProps {
   data: FinaleSlideData;
@@ -112,18 +112,92 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
 
   // Function to share/download the slide as an image
   const handleShare = async () => {
-    if (!slideRef.current || isSharing) return;
+    if (isSharing) return;
 
     setIsSharing(true);
+    let tempContainer: HTMLDivElement | null = null;
+
     try {
-      const canvas = await html2canvas(slideRef.current, {
-        backgroundColor: null,
-        scale: 2,
+      const targetWidth = 1080;
+      const targetHeight = 1920;
+
+      // Convert images to base64 data URLs
+      const imageDataUrls: string[] = [];
+      for (const imageData of imageUrls.slice(0, 3)) {
+        try {
+          const file = data.imageFiles[imageData.index];
+          const dataUrl = await fileToDataURL(file);
+          imageDataUrls.push(dataUrl);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+          // Continue with other images even if one fails
+        }
+      }
+
+      // Generate HTML structure
+      const htmlContent = await generateShareImageHTML(
+        data.totalChats,
+        data.daysUsed,
+        data.personalityType,
+        imageDataUrls
+      );
+
+      // Create temporary container element
+      tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = `${targetWidth}px`;
+      tempContainer.style.height = `${targetHeight}px`;
+      tempContainer.innerHTML = htmlContent;
+      document.body.appendChild(tempContainer);
+
+      // Wait for images to load
+      const images = tempContainer.querySelectorAll('img');
+      await Promise.allSettled(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) {
+                resolve();
+              } else {
+                img.onload = () => resolve();
+                img.onerror = () => {
+                  console.warn('Image failed to load, continuing anyway');
+                  resolve(); // Resolve instead of reject to continue
+                };
+              }
+            })
+        )
+      );
+
+      // Wait a bit more for layout to settle
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Convert to canvas
+      const canvas = await html2canvas(tempContainer, {
+        backgroundColor: '#ffffff',
+        width: targetWidth,
+        height: targetHeight,
+        scale: 1,
         useCORS: true,
         logging: false,
+        allowTaint: true,
       });
 
-      canvas.toBlob((blob) => {
+      // Ensure canvas is exactly 1080x1920
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = targetWidth;
+      finalCanvas.height = targetHeight;
+      const ctx = finalCanvas.getContext('2d');
+
+      if (ctx) {
+        // Draw the captured canvas, scaling if needed to fit exact dimensions
+        ctx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+      }
+
+      // Download the image
+      finalCanvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -139,6 +213,11 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
     } catch (error) {
       console.error('Error generating share image:', error);
       setIsSharing(false);
+    } finally {
+      // Clean up temporary container
+      if (tempContainer && tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
     }
   };
 
@@ -148,6 +227,171 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
       return `a${type === 'all-day chatter' ? 'n' : ''} ${type}`;
     }
     return `a ${type}`;
+  };
+
+  // Convert File to base64 data URL
+  const fileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Generate optimized HTML structure for image export
+  const generateShareImageHTML = async (
+    totalChats: number,
+    daysUsed: number,
+    personalityType: string,
+    imageDataUrls: string[]
+  ): Promise<string> => {
+    const formattedPersonality = formatPersonalityType(personalityType);
+
+    // Format numbers with commas
+    const formatNumber = (num: number) => {
+      return num.toLocaleString('en-US');
+    };
+
+    // Helper to create text with preserved spaces
+    const spacedText = (text: string) => {
+      return text.split(' ').join('\u00A0'); // Use non-breaking spaces
+    };
+    const hackySpacedText = (text: string) => {
+      return text.split(' ').join(' '); // Use non-breaking spaces
+    };
+
+    // Generate image HTML (up to 3 images)
+    const imageHTML = imageDataUrls
+      .slice(0, 3)
+      .map(
+        (dataUrl) => `
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0;">
+        <img 
+          src="${dataUrl}" 
+          alt="Generated image" 
+          style="width: 100%; height: auto; max-height: 100%; object-fit: contain; border-radius: 12px; display: block;"
+        />
+      </div>
+    `
+      )
+      .join('');
+
+    return `
+      <div style="
+        width: 1080px;
+        height: 1920px;
+        background-color: #ffffff;
+        color: #000000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        display: flex;
+        flex-direction: column;
+        padding: 96px 72px;
+        box-sizing: border-box;
+      ">
+        <!-- Title -->
+        <h1 style="
+          font-size: 56px;
+          font-weight: 600;
+          margin: 0 0 96px 0;
+          color: #000000;
+          line-height: 1.2;
+          letter-spacing: -0.02em;
+        ">ChatGPT 2025 Wrapped</h1>
+
+        <!-- Stats Section -->
+        <div style="
+          display: flex;
+          flex-direction: column;
+          gap: 64px;
+          margin-bottom: 96px;
+        ">
+          <!-- Total Chats -->
+          <div>
+            <div style="
+              font-size: 140px;
+              font-weight: 700;
+              line-height: 1;
+              color: #000000;
+              margin-bottom: 12px;
+              letter-spacing: -0.03em;
+            ">${formatNumber(totalChats)}</div>
+            <p style="
+              font-size: 28px;
+              font-weight: 600;
+              color: #666666;
+              margin: 0;
+              line-height: 1.4;
+              width: 1080px;
+            ">${hackySpacedText('Chats created')}</p>
+          </div>
+
+          <!-- Days Used -->
+          <div>
+            <div style="
+              font-size: 140px;
+              font-weight: 700;
+              line-height: 1;
+              color: #000000;
+              margin-bottom: 12px;
+              letter-spacing: -0.03em;
+            ">${formatNumber(daysUsed)}</div>
+            <p style="
+              font-size: 28px;
+              font-weight: 600;
+              color: #666666;
+              margin: 0;
+              line-height: 1.4;
+              width 1080px;
+            ">${hackySpacedText('Days used this year')}</p>
+          </div>
+
+          <!-- Personality Type -->
+          <div>
+            <p style="
+              font-size: 80px;
+              font-weight: 700;
+              color: #000000;
+              margin: 0;
+              line-height: 1.2;
+              letter-spacing: -0.02em;
+            ">${spacedText(formattedPersonality)}</p>
+          </div>
+        </div>
+
+        <!-- Images Section -->
+        ${
+          imageDataUrls.length > 0
+            ? `
+        <div style="
+          display: flex;
+          gap: 20px;
+          margin-bottom: auto;
+          flex: 1;
+          align-items: flex-start;
+          min-height: 0;
+        ">
+          ${imageHTML}
+        </div>
+        `
+            : ''
+        }
+
+        <!-- Footer Link -->
+        <div style="
+          margin-top: auto;
+          padding-top: 48px;
+        ">
+          <p style="
+            font-size: 20px;
+            color: #999999;
+            margin: 0;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+          ">chatgptwrapped.arjundabir.com</p>
+        </div>
+      </div>
+    `;
   };
 
   return (
