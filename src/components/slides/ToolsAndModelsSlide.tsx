@@ -136,7 +136,7 @@ export function ToolsAndModelsSlide({ data }: ToolsAndModelsSlideProps) {
                 <span className="text-2xl font-bold text-foreground">
                   {data.thinkingModeCount === 1
                     ? '1 time'
-                    : `${data.thinkingModeCount} times`}
+                    : `${data.thinkingModeCount.toLocaleString()} times`}
                 </span>
                 .
               </p>

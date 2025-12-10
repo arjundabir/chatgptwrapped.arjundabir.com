@@ -16,7 +16,7 @@ export function FirstConversationSlide({ data }: FirstConversationSlideProps) {
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl h-[calc(100dvh-(72px+32px))] py-6">
-      <h1 className="text-xl font-semibold">Your First Chat in 2025:</h1>
+      <h1 className="text-xl font-semibold">Your First Chat in 2025</h1>
       {/* Date on top */}
       <div>
         <motion.div
@@ -109,15 +109,18 @@ export function FirstConversationSlide({ data }: FirstConversationSlideProps) {
       )}
       <Ai01 />
 
-      {/* Let's see what you did in 2025... */}
+      {/* Your first chat this year... */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut', delay: 1.0 }}
       >
-        <p className="text-base text-foreground">
-          Let's see what you did in 2025.{' '}
-          <span className="italic"> Click the arrow to continue.</span>
+        <p className="text-xl text-foreground font-semibold">
+          was your first chat this year.
+          <span className="text-base font-normal">
+            {' '}
+            Now, click the arrow to see what you did in 2025.
+          </span>
         </p>
       </motion.div>
     </div>

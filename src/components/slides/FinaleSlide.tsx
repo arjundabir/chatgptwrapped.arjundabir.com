@@ -381,6 +381,10 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
         <div style="
           margin-top: auto;
           padding-top: 48px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 24px;
         ">
           <p style="
             font-size: 20px;
@@ -389,6 +393,14 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
             font-weight: 400;
             letter-spacing: 0.01em;
           ">chatgptwrapped.arjundabir.com</p>
+          <p style="
+            font-size: 20px;
+            color: #999999;
+            margin: 0;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+            text-align: right;
+          ">Unofficial — Not endorsed by OpenAI</p>
         </div>
       </div>
     `;
@@ -406,7 +418,7 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <h1 className="text-xl font-semibold">Your 2025</h1>
+        <h1 className="text-xl font-semibold">2025 ChatGPT Wrapped</h1>
       </motion.div>
 
       {/* Stats Section */}
@@ -495,9 +507,12 @@ export function FinaleSlide({ data }: FinaleSlideProps) {
         className="mt-auto"
       >
         {/* Link */}
-        <div className="mb-4">
+        <div className="mb-4 flex justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">
             chatgptwrapped.arjundabir.com
+          </p>
+          <p className="text-xs text-muted-foreground text-right">
+            Unofficial — Not endorsed by OpenAI
           </p>
         </div>
 

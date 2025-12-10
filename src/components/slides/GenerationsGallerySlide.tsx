@@ -101,7 +101,6 @@ export function GenerationsGallerySlide({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-100px' }}
         transition={{ duration: 0.6, ease: 'easeOut', delay: 0.4 }}
-        className="flex flex-col gap-2"
       >
         <p className="text-3xl">
           <span className="text-muted-foreground">You generated </span>
@@ -110,10 +109,8 @@ export function GenerationsGallerySlide({
           </span>
           <span className="text-muted-foreground">
             {' '}
-            {data.imageCount === 1 ? 'image and' : 'images and'}
-          </span>{' '}
-        </p>
-        <p className="text-3xl">
+            {data.imageCount === 1 ? 'image and' : 'images and'}{' '}
+          </span>
           <span className="font-bold text-foreground text-4xl">
             {data.soraVideoCount}
           </span>
