@@ -352,9 +352,9 @@ export default function Ai01() {
                   transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
                   className="flex justify-start mb-4"
                 >
-                  <div className="px-4 py-3 bg-muted rounded-2xl max-w-[80%]">
+                  <div className="py-3 max-w-[80%]">
                     <span className="text-sm text-foreground">
-                      Processing ChatGPT segments...
+                      Processing folder...
                     </span>
                   </div>
                 </motion.div>

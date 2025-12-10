@@ -16,7 +16,7 @@ export function FirstConversationSlide({ data }: FirstConversationSlideProps) {
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl h-[calc(100dvh-(72px+32px))] py-6">
-      <h1 className="text-xl font-semibold">Your First Chat:</h1>
+      <h1 className="text-xl font-semibold">Your First Chat in 2025:</h1>
       {/* Date on top */}
       <div>
         <motion.div
@@ -98,7 +98,11 @@ export function FirstConversationSlide({ data }: FirstConversationSlideProps) {
         >
           <div className="rounded-2xl px-4 py-3 max-w-[80%]">
             <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{data.firstAssistantMessage}</ReactMarkdown>
+              <ReactMarkdown>
+                {data.firstAssistantMessage.length > 400
+                  ? data.firstAssistantMessage.slice(0, 400) + '...'
+                  : data.firstAssistantMessage}
+              </ReactMarkdown>
             </div>
           </div>
         </motion.div>
